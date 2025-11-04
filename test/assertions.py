@@ -33,7 +33,9 @@ def assert_chunk_ancestors(
     ), f"Expected ancestors {expected_ancestors}, but got {chunk.chunk_ancestors}. {message}"
 
 
-def assert_chunk_count(chunks: List[Any], expected_count: int, message: str = "") -> None:
+def assert_chunk_count(
+    chunks: List[Any], expected_count: int, message: str = ""
+) -> None:
     """Assert that the number of chunks matches expected count.
 
     Args:
@@ -69,12 +71,14 @@ def assert_chunk_metadata(
     ), f"chunk does not have 'metadata' attribute. {message}"
 
     metadata = chunk.metadata
-    assert isinstance(metadata, dict), f"metadata should be a dict, got {type(metadata)}"
+    assert isinstance(
+        metadata, dict
+    ), f"metadata should be a dict, got {type(metadata)}"
 
     for key in expected_keys:
-        assert key in metadata, (
-            f"Expected key '{key}' in metadata, but got keys {list(metadata.keys())}. {message}"
-        )
+        assert (
+            key in metadata
+        ), f"Expected key '{key}' in metadata, but got keys {list(metadata.keys())}. {message}"
 
 
 def assert_chunk_text_not_empty(chunk: Any, message: str = "") -> None:
@@ -87,13 +91,15 @@ def assert_chunk_text_not_empty(chunk: Any, message: str = "") -> None:
     Raises:
         AssertionError: If chunk text is empty or None
     """
-    assert hasattr(chunk, "chunk_text"), f"chunk does not have 'chunk_text' attribute. {message}"
+    assert hasattr(
+        chunk, "chunk_text"
+    ), f"chunk does not have 'chunk_text' attribute. {message}"
 
     assert chunk.chunk_text, f"chunk_text should not be empty. {message}"
 
-    assert isinstance(chunk.chunk_text, str), (
-        f"chunk_text should be a string, got {type(chunk.chunk_text)}. {message}"
-    )
+    assert isinstance(
+        chunk.chunk_text, str
+    ), f"chunk_text should be a string, got {type(chunk.chunk_text)}. {message}"
 
 
 def assert_chunk_size_valid(chunk: Any, message: str = "") -> None:
@@ -106,18 +112,20 @@ def assert_chunk_size_valid(chunk: Any, message: str = "") -> None:
     Raises:
         AssertionError: If chunk size is not a valid positive number
     """
-    assert hasattr(chunk, "chunk_size"), f"chunk does not have 'chunk_size' attribute. {message}"
+    assert hasattr(
+        chunk, "chunk_size"
+    ), f"chunk does not have 'chunk_size' attribute. {message}"
 
     assert isinstance(
         chunk.chunk_size, int
     ), f"chunk_size should be int, got {type(chunk.chunk_size)}. {message}"
 
-    assert chunk.chunk_size >= 0, f"chunk_size should be non-negative, got {chunk.chunk_size}. {message}"
+    assert (
+        chunk.chunk_size >= 0
+    ), f"chunk_size should be non-negative, got {chunk.chunk_size}. {message}"
 
 
-def assert_chunks_have_proper_order(
-    chunks: List[Any], message: str = ""
-) -> None:
+def assert_chunks_have_proper_order(chunks: List[Any], message: str = "") -> None:
     """Assert that chunks maintain proper line ordering.
 
     Args:
@@ -167,9 +175,9 @@ def assert_ancestors_are_first_lines(
         AssertionError: If ancestors contain unexpected newlines or wrong count
     """
     for i, ancestor in enumerate(chunk.chunk_ancestors):
-        assert isinstance(ancestor, str), (
-            f"Ancestor {i} should be string, got {type(ancestor)}. {message}"
-        )
+        assert isinstance(
+            ancestor, str
+        ), f"Ancestor {i} should be string, got {type(ancestor)}. {message}"
         assert (
             "\n" not in ancestor
         ), f"Ancestor {i} contains newline: {repr(ancestor)}. {message}"

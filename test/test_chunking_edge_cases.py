@@ -21,7 +21,7 @@ import pytest
 from typing import Dict
 
 
-@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript"])
+@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript", "cpp"])
 class TestEmptyAndMinimalCode:
     """Test edge cases with empty or minimal code."""
 
@@ -84,7 +84,7 @@ class TestEmptyAndMinimalCode:
         assert isinstance(result, list)
 
 
-@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript"])
+@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript", "cpp"])
 class TestNestingDepth:
     """Test edge cases with deep nesting structures."""
 
@@ -108,7 +108,7 @@ class TestNestingDepth:
         assert isinstance(result, list)
 
 
-@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript"])
+@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript", "cpp"])
 class TestUnicodeIdentifiers:
     """Test edge cases with Unicode characters in identifiers."""
 
@@ -135,7 +135,7 @@ class TestUnicodeIdentifiers:
             assert isinstance(content, str)
 
 
-@pytest.mark.parametrize("language", ["python", "java", "csharp"])
+@pytest.mark.parametrize("language", ["python", "java", "csharp", "cpp"])
 class TestLanguageSpecificEdgeCases:
     """Language-specific edge cases."""
 
@@ -260,7 +260,7 @@ class TestLanguageSpecificEdgeCases:
         assert isinstance(result, list)
 
 
-@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript"])
+@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript", "cpp"])
 class TestMultipleDefinitions:
     """Test edge cases with multiple separate definitions."""
 
@@ -282,7 +282,7 @@ class TestMultipleDefinitions:
         assert len(result) > 0
 
 
-@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript"])
+@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript", "cpp"])
 class TestCodeQualityEdgeCases:
     """Test handling of code quality edge cases."""
 
@@ -307,7 +307,7 @@ class TestCodeQualityEdgeCases:
         assert isinstance(result, list)
 
 
-@pytest.mark.parametrize("language", ["java", "csharp", "typescript"])
+@pytest.mark.parametrize("language", ["java", "csharp", "typescript", "cpp"])
 class TestLanguageDeclarations:
     """Test handling of language-specific declaration patterns."""
 
@@ -598,3 +598,56 @@ class TestTypeScriptSpecialCases:
 
         result = builder.chunkify(code)
         assert len(result) > 0
+
+
+class TestCppSpecialCases:
+    """C++-specific edge cases beyond parametrized tests."""
+
+    def test_cpp_namespace_basic(
+        self, language_samples: Dict[str, Dict[str, str]]
+    ) -> None:
+        """Test basic C++ namespace chunking."""
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = language_samples["cpp"]["namespace"]
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        chunks = builder.chunkify(code)
+
+        assert len(chunks) >= 1
+        content = " ".join(chunk["content"] for chunk in chunks)
+        assert "namespace Math" in content
+
+    def test_cpp_nested_namespace(
+        self, language_samples: Dict[str, Dict[str, str]]
+    ) -> None:
+        """Test nested namespace ancestor extraction."""
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = language_samples["cpp"]["nested_namespace"]
+        builder = ASTChunkBuilder(
+            max_chunk_size=200, language="cpp", metadata_template="default"
+        )
+
+        chunks = builder.chunkify(code)
+
+        assert len(chunks) >= 1
+        content = " ".join(chunk["content"] for chunk in chunks)
+        assert "namespace Outer" in content
+        assert "namespace Inner" in content
+
+    def test_cpp_struct(self, language_samples: Dict[str, Dict[str, str]]) -> None:
+        """Test C++ struct chunking."""
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = language_samples["cpp"]["struct"]
+        builder = ASTChunkBuilder(
+            max_chunk_size=300, language="cpp", metadata_template="default"
+        )
+
+        chunks = builder.chunkify(code)
+
+        assert len(chunks) >= 1
+        assert "struct Point" in chunks[0]["content"]

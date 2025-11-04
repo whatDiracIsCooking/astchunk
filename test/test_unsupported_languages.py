@@ -14,7 +14,6 @@ Expected behavior in GREEN phase (after fix):
 """
 
 import pytest
-from typing import Any
 
 
 class TestUnsupportedLanguages:
@@ -35,9 +34,10 @@ class TestUnsupportedLanguages:
                 max_chunk_size=512, language="ruby", metadata_template="default"
             )
 
-        assert "ruby" in str(exc_info.value).lower() or "unsupported" in str(
-            exc_info.value
-        ).lower()
+        assert (
+            "ruby" in str(exc_info.value).lower()
+            or "unsupported" in str(exc_info.value).lower()
+        )
 
     def test_go_language_rejected(self) -> None:
         """Go language is not supported, should raise ValueError.
@@ -54,9 +54,10 @@ class TestUnsupportedLanguages:
                 max_chunk_size=512, language="go", metadata_template="default"
             )
 
-        assert "go" in str(exc_info.value).lower() or "unsupported" in str(
-            exc_info.value
-        ).lower()
+        assert (
+            "go" in str(exc_info.value).lower()
+            or "unsupported" in str(exc_info.value).lower()
+        )
 
     def test_rust_language_rejected(self) -> None:
         """Rust language is not supported, should raise ValueError.
@@ -73,10 +74,12 @@ class TestUnsupportedLanguages:
                 max_chunk_size=512, language="rust", metadata_template="default"
             )
 
-        assert "rust" in str(exc_info.value).lower() or "unsupported" in str(
-            exc_info.value
-        ).lower()
+        assert (
+            "rust" in str(exc_info.value).lower()
+            or "unsupported" in str(exc_info.value).lower()
+        )
 
+    @pytest.mark.skip(reason="C++ is now supported")
     def test_cpp_language_not_yet_supported(self) -> None:
         """C++ language is not yet supported (Cycle 2 feature).
 

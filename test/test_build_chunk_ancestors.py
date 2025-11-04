@@ -13,19 +13,20 @@ This is the PRIMARY test module for demonstrating the bug and validating the fix
 """
 
 import pytest
-from typing import Dict, Any, List
+from typing import Dict
 import tree_sitter as ts
 import tree_sitter_python as tspython
 import tree_sitter_java as tsjava
 import tree_sitter_c_sharp as tscsharp
 import tree_sitter_typescript as tstypescript
+import tree_sitter_cpp as tscpp
 
 
 def get_parser(language: str) -> ts.Parser:
     """Get a tree-sitter parser for the given language.
 
     Args:
-        language: Language identifier (python, java, csharp, typescript)
+        language: Language identifier (python, java, csharp, typescript, cpp)
 
     Returns:
         Initialized tree-sitter Parser
@@ -41,11 +42,13 @@ def get_parser(language: str) -> ts.Parser:
         return ts.Parser(ts.Language(tscsharp.language()))
     elif language == "typescript":
         return ts.Parser(ts.Language(tstypescript.language_tsx()))
+    elif language == "cpp":
+        return ts.Parser(ts.Language(tscpp.language()))
     else:
         raise ValueError(f"Unsupported language: {language}")
 
 
-@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript"])
+@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript", "cpp"])
 class TestBuildChunkAncestorsBasic:
     """Basic tests for build_chunk_ancestors() across all languages."""
 
@@ -128,7 +131,7 @@ class TestBuildChunkAncestorsBasic:
         assert len(result) > 0
 
 
-@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript"])
+@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript", "cpp"])
 class TestAncestorExtractionCorrectness:
     """Tests for correctness of ancestor extraction across languages."""
 
@@ -234,7 +237,7 @@ class TestAncestorExtractionCorrectness:
         assert len(result) > 0
 
 
-@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript"])
+@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript", "cpp"])
 class TestAncestorExtractionEdgeCases:
     """Edge case tests specific to ancestor extraction."""
 
@@ -316,7 +319,7 @@ class TestAncestorExtractionEdgeCases:
         assert len(result) > 0
 
 
-@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript"])
+@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript", "cpp"])
 class TestNodeTypeMapping:
     """Tests for correct node type identification across languages."""
 
@@ -352,9 +355,9 @@ class TestNodeTypeMapping:
             return False
 
         # Python should have class_definition
-        assert find_node_type(ast.root_node, "class_definition"), (
-            "Python parser should recognize class_definition node type"
-        )
+        assert find_node_type(
+            ast.root_node, "class_definition"
+        ), "Python parser should recognize class_definition node type"
 
     def test_python_recognizes_function_definition(
         self, language: str, language_samples: Dict[str, Dict[str, str]]
@@ -387,9 +390,9 @@ class TestNodeTypeMapping:
             return False
 
         # Python should have function_definition
-        assert find_node_type(ast.root_node, "function_definition"), (
-            "Python parser should recognize function_definition node type"
-        )
+        assert find_node_type(
+            ast.root_node, "function_definition"
+        ), "Python parser should recognize function_definition node type"
 
     def test_java_class_node_types_exist(
         self, language: str, language_samples: Dict[str, Dict[str, str]]

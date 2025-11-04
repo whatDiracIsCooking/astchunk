@@ -130,8 +130,7 @@ class TestLargeFilePerformance:
             code_lines.append(f"class Class{i}:")
             for j in range(5):
                 code_lines.append(
-                    f"    def method{j}(self):"
-                    f"\n        return {i * 10 + j}\n"
+                    f"    def method{j}(self):" f"\n        return {i * 10 + j}\n"
                 )
 
         code = "\n".join(code_lines)
@@ -166,8 +165,7 @@ class TestLargeFilePerformance:
             code_lines.append(f"public class Class{i} {{")
             for j in range(5):
                 code_lines.append(
-                    f"    public int method{j}() {{"
-                    f" return {i * 10 + j}; }}"
+                    f"    public int method{j}() {{" f" return {i * 10 + j}; }}"
                 )
             code_lines.append("}")
 

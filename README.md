@@ -257,12 +257,13 @@ from astchunk.astchunk import ASTChunk
 
 ## Supported Languages
 
-| Language   | File Extensions | Status |
-|------------|----------------|---------|
-| Python     | `.py`          | ✅ Full support |
-| Java       | `.java`        | ✅ Full support |
-| C#         | `.cs`          | ✅ Full support |
-| TypeScript | `.ts`, `.tsx`  | ✅ Full support |
+| Language   | File Extensions       | Status |
+|------------|-----------------------|---------|
+| Python     | `.py`                | ✅ Full support |
+| Java       | `.java`              | ✅ Full support |
+| C#         | `.cs`                | ✅ Full support |
+| TypeScript | `.ts`, `.tsx`        | ✅ Full support |
+| C++        | `.cpp`, `.h`, `.hpp` | ✅ Full support |
 
 <!-- ## Contributing
 

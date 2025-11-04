@@ -66,9 +66,7 @@ def language_samples() -> dict[str, dict[str, str]]:
                 "    pass\n"
             ),
             "unicode_identifiers": (
-                "class Ñame:\n"
-                "    def métod(self):\n"
-                "        pass\n"
+                "class Ñame:\n" "    def métod(self):\n" "        pass\n"
             ),
             "deeply_nested": (
                 "class L1:\n"
@@ -126,14 +124,14 @@ def language_samples() -> dict[str, dict[str, str]]:
             "method_with_lambda": (
                 "public class Lambda {\n"
                 "    void test() {\n"
-                "        Runnable r = () -> System.out.println(\"Hello\");\n"
+                '        Runnable r = () -> System.out.println("Hello");\n'
                 "    }\n"
                 "}\n"
             ),
             "interface_with_default_method": (
                 "public interface MyInterface {\n"
                 "    default void defaultMethod() {\n"
-                "        System.out.println(\"Default\");\n"
+                '        System.out.println("Default");\n'
                 "    }\n"
                 "}\n"
             ),
@@ -152,9 +150,7 @@ def language_samples() -> dict[str, dict[str, str]]:
                 "}\n"
             ),
             "unicode_identifiers": (
-                "public class Ñame {\n"
-                "    public void métod() {}\n"
-                "}\n"
+                "public class Ñame {\n" "    public void métod() {}\n" "}\n"
             ),
             "deeply_nested": (
                 "public class L1 {\n"
@@ -222,9 +218,7 @@ def language_samples() -> dict[str, dict[str, str]]:
                 "}\n"
             ),
             "unicode_identifiers": (
-                "public class Ñame {\n"
-                "    public void Métod() {}\n"
-                "}\n"
+                "public class Ñame {\n" "    public void Métod() {}\n" "}\n"
             ),
             "deeply_nested": (
                 "public class L1 {\n"
@@ -289,11 +283,7 @@ def language_samples() -> dict[str, dict[str, str]]:
                 "    subtract(a: number, b: number): number { return a - b; }\n"
                 "}\n"
             ),
-            "unicode_identifiers": (
-                "class Ñame {\n"
-                "    métod() {}\n"
-                "}\n"
-            ),
+            "unicode_identifiers": ("class Ñame {\n" "    métod() {}\n" "}\n"),
             "deeply_nested": (
                 "class L1 {\n"
                 "    class L2 {\n"
@@ -310,6 +300,75 @@ def language_samples() -> dict[str, dict[str, str]]:
                 "    myMethod = () => {\n"
                 "        return 42;\n"
                 "    };\n"
+                "}\n"
+            ),
+        },
+        "cpp": {
+            "empty": "",
+            "comments_only": "// This is a comment\n// Another comment",
+            "single_class": (
+                "class MyClass {\n" "public:\n" "    void method() {}\n" "};\n"
+            ),
+            "single_function": "int myFunction() {\n    return 42;\n}\n",
+            "function_declaration": "int myFunction() {\n    return 42;\n}\n",
+            "nested_classes": (
+                "class Outer {\n"
+                "public:\n"
+                "    class Inner {\n"
+                "        void method() {}\n"
+                "    };\n"
+                "};\n"
+            ),
+            "class_with_multiple_methods": (
+                "class Calculator {\n"
+                "public:\n"
+                "    int add(int a, int b) { return a + b; }\n"
+                "    int subtract(int a, int b) { return a - b; }\n"
+                "};\n"
+            ),
+            "deeply_nested": (
+                "class L1 {\n"
+                "    class L2 {\n"
+                "        class L3 {\n"
+                "            class L4 {\n"
+                "                void method() {}\n"
+                "            };\n"
+                "        };\n"
+                "    };\n"
+                "};\n"
+            ),
+            "unicode_identifiers": (
+                "class Ñame {\n" "public:\n" "    void métod() {}\n" "};\n"
+            ),
+            # C++-specific scenarios
+            "namespace": (
+                "namespace Math {\n"
+                "    int multiply(int a, int b) {\n"
+                "        return a * b;\n"
+                "    }\n"
+                "}\n"
+            ),
+            "nested_namespace": (
+                "namespace Outer {\n"
+                "    namespace Inner {\n"
+                "        class Nested {};\n"
+                "    }\n"
+                "}\n"
+            ),
+            "struct": (
+                "struct Point {\n"
+                "    int x;\n"
+                "    int y;\n"
+                "    void method() {}\n"
+                "};\n"
+            ),
+            "mixed_elements": (
+                "namespace App {\n"
+                "    class MyClass {\n"
+                "    public:\n"
+                "        void method() {}\n"
+                "    };\n"
+                "    int function() { return 0; }\n"
                 "}\n"
             ),
         },
@@ -396,5 +455,26 @@ def typescript_builder(language_samples: dict[str, dict[str, str]]) -> object:
     return ASTChunkBuilder(
         max_chunk_size=512,
         language="typescript",
+        metadata_template="default",
+    )
+
+
+@pytest.fixture
+def cpp_builder(language_samples: dict[str, dict[str, str]]) -> object:
+    """Provide a C++ AST builder for testing.
+
+    Returns an ASTChunkBuilder configured for C++ parsing.
+
+    Args:
+        language_samples: The language_samples fixture (unused but indicates dependency)
+
+    Returns:
+        Configured ASTChunkBuilder instance for C++
+    """
+    from astchunk.astchunk_builder import ASTChunkBuilder
+
+    return ASTChunkBuilder(
+        max_chunk_size=512,
+        language="cpp",
         metadata_template="default",
     )

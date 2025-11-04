@@ -17,11 +17,17 @@ Example:
     >>> LANGUAGE_NODE_TYPES["rust"] = {
     ...     "class": {"impl_item", "struct_item", "enum_item"},
     ...     "function": {"function_item", "method_item"},
+    ...     "namespace": {"mod_item"},  # Optional - only if language has namespaces
     ... }
 
 Type Definitions:
-    LanguageMapping: Dict mapping category ("class", "function") to Set of node type names
+    LanguageMapping: Dict mapping category ("class", "function", "namespace") to Set of node type names
     LanguageMappings: Dict mapping language name to LanguageMapping
+
+Categories:
+    - "class": Class-like constructs (classes, interfaces, structs, enums)
+    - "function": Function-like constructs (functions, methods, constructors)
+    - "namespace": Namespace-like constructs (namespaces, modules) - optional, not all languages
 """
 
 from typing import Dict, Set
@@ -48,6 +54,12 @@ LANGUAGE_NODE_TYPES: LanguageMappings = {
     "typescript": {
         "class": {"class_declaration", "interface_declaration"},
         "function": {"function_declaration", "method_definition", "arrow_function"},
+        "namespace": {"internal_module"},
+    },
+    "cpp": {
+        "class": {"class_specifier", "struct_specifier"},
+        "function": {"function_definition"},
+        "namespace": {"namespace_definition"},
     },
 }
 
@@ -62,11 +74,12 @@ def get_ancestor_node_types(language: str) -> Set[str]:
 
     Args:
         language: Programming language name. Must be one of the supported
-            languages: 'python', 'java', 'csharp', 'typescript'.
+            languages: 'python', 'java', 'csharp', 'typescript', 'cpp'.
 
     Returns:
         Set of tree-sitter node type strings that represent ancestor nodes
-        for the given language. Returns union of "class" and "function" sets.
+        for the given language. Returns union of "class", "function", and
+        "namespace" sets (where applicable - not all languages have namespaces).
 
     Raises:
         ValueError: If the language is not supported. Error message includes
@@ -79,6 +92,10 @@ def get_ancestor_node_types(language: str) -> Set[str]:
         >>> get_ancestor_node_types("java")
         {'class_declaration', 'interface_declaration', 'enum_declaration',
          'method_declaration', 'constructor_declaration'}
+
+        >>> get_ancestor_node_types("cpp")
+        {'class_specifier', 'struct_specifier', 'function_definition',
+         'namespace_definition'}
 
         >>> get_ancestor_node_types("ruby")  # Unsupported
         Traceback (most recent call last):
@@ -96,5 +113,9 @@ def get_ancestor_node_types(language: str) -> Set[str]:
         )
 
     mapping = LANGUAGE_NODE_TYPES[language]
-    # Union of class and function node types (both are Sets for O(1) membership)
-    return mapping.get("class", set()) | mapping.get("function", set())
+    # Union of class, function, and namespace node types (all are Sets for O(1) membership)
+    return (
+        mapping.get("class", set())
+        | mapping.get("function", set())
+        | mapping.get("namespace", set())
+    )

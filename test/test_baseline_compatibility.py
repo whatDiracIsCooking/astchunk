@@ -10,12 +10,7 @@ existing ancestor extraction works correctly. If these tests fail after
 modifications, it indicates a regression that must be reverted.
 """
 
-import pytest
-from test.assertions import (
-    assert_chunk_ancestors,
-    assert_empty_ancestors,
-    assert_chunk_text_not_empty,
-)
+# Test assertions validated through pytest's built-in assertions
 
 
 class TestPythonBaselineCompatibility:

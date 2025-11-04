@@ -15,11 +15,10 @@ This demonstrates the bug: build_chunk_ancestors() only recognizes Python node t
 """
 
 import pytest
-from typing import List, Dict, Any
-from test.assertions import assert_chunk_ancestors, assert_empty_ancestors
+from typing import Dict
 
 
-@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript"])
+@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript", "cpp"])
 class TestBasicChunking:
     """Test basic chunking across all languages.
 
@@ -76,7 +75,9 @@ class TestBasicChunking:
             code = language_samples[language]["single_class"]
         else:
             # Python and TypeScript have function definitions
-            func_key = "single_function" if language == "python" else "function_declaration"
+            func_key = (
+                "single_function" if language == "python" else "function_declaration"
+            )
             code = language_samples[language][func_key]
         builder = ASTChunkBuilder(
             max_chunk_size=512, language=language, metadata_template="default"
@@ -114,7 +115,7 @@ class TestBasicChunking:
         # Nested definitions may produce 1+ chunks
 
 
-@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript"])
+@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript", "cpp"])
 class TestAncestorExtraction:
     """Test ancestor extraction across all languages.
 
@@ -247,7 +248,7 @@ class TestAncestorExtraction:
         assert len(result) > 0, f"{language}: Should produce chunks"
 
 
-@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript"])
+@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript", "cpp"])
 class TestEmptyAncestorCases:
     """Test cases where chunks should have empty ancestors.
 
@@ -282,7 +283,7 @@ class TestEmptyAncestorCases:
         assert isinstance(result, list), f"{language}: Should return list"
 
 
-@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript"])
+@pytest.mark.parametrize("language", ["python", "java", "csharp", "typescript", "cpp"])
 class TestChunkMetadata:
     """Test that chunk metadata is properly generated.
 
@@ -315,7 +316,9 @@ class TestChunkMetadata:
 
         for chunk in result:
             assert "metadata" in chunk, f"{language}: Chunk should have metadata"
-            assert isinstance(chunk["metadata"], dict), f"{language}: Metadata should be dict"
+            assert isinstance(
+                chunk["metadata"], dict
+            ), f"{language}: Metadata should be dict"
 
     def test_chunks_have_content(
         self, language: str, language_samples: Dict[str, Dict[str, str]]
@@ -343,5 +346,7 @@ class TestChunkMetadata:
 
         for chunk in result:
             assert "content" in chunk, f"{language}: Chunk should have content"
-            assert isinstance(chunk["content"], str), f"{language}: Content should be string"
+            assert isinstance(
+                chunk["content"], str
+            ), f"{language}: Content should be string"
             assert len(chunk["content"]) > 0, f"{language}: Content should not be empty"
