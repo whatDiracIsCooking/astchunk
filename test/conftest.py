@@ -375,6 +375,135 @@ def language_samples() -> dict[str, dict[str, str]]:
     }
 
 
+@pytest.fixture(scope="function")
+def cpp_template_samples() -> dict[str, str]:
+    """C++ template code samples organized by complexity.
+
+    Each sample demonstrates a specific C++ template feature.
+    Used to test that template_declaration nodes are properly recognized
+    as ancestor nodes in chunk context.
+
+    Returns:
+        dict: Mapping of template type names to C++ code snippets
+              - template_function: Basic function template
+              - template_class: Basic class template
+              - template_default_args: Template with default arguments
+              - template_non_type_param: Template with non-type parameter
+              - template_template_param: Template with template parameter
+              - template_nested_in_class: Template nested inside a class
+              - template_specialization: Template specialization
+              - template_variadic: Variadic template (C++11)
+              - template_multiple_params: Multiple type parameters
+    """
+    return {
+        "template_function": """
+template<typename T>
+T max(T a, T b) { return (a > b) ? a : b; }
+        """,
+        "template_class": """
+template<typename T>
+class Container { T value; };
+        """,
+        "template_default_args": """
+template<typename T = int>
+class Container { };
+        """,
+        "template_non_type_param": """
+template<int N>
+class Array { };
+        """,
+        "template_template_param": """
+template<template<typename> class C>
+class Wrapper { };
+        """,
+        "template_nested_in_class": """
+class Outer {
+public:
+    template<typename T>
+    class Inner { };
+};
+        """,
+        "template_specialization": """
+template<>
+class Container<int> { int special; };
+        """,
+        "template_variadic": """
+template<typename... Args>
+class Tuple { };
+        """,
+        "template_multiple_params": """
+template<typename T, typename U>
+class Pair { };
+        """,
+    }
+
+
+@pytest.fixture(scope="function")
+def cpp_lambda_samples() -> dict[str, str]:
+    """C++ lambda code samples organized by complexity.
+
+    Each sample demonstrates a specific C++ lambda feature.
+    Used to test that lambda_expression nodes are properly recognized
+    as function-like ancestor nodes in chunk context.
+
+    Returns:
+        dict: Mapping of lambda type names to C++ code snippets
+              - lambda_basic: Basic lambda without capture
+              - lambda_capture: Lambda with capture clause
+              - lambda_generic_c14: Generic lambda (C++14 auto parameters)
+              - lambda_explicit_return: Lambda with explicit return type
+              - lambda_in_function: Lambda inside a function
+              - lambda_nested: Nested lambda expressions
+              - lambda_in_stl: Lambda used in STL algorithm
+              - lambda_in_template: Lambda in template context
+              - template_lambda_interaction: Template containing lambda
+    """
+    return {
+        "lambda_basic": """
+auto f = [](int x) { return x * 2; };
+        """,
+        "lambda_capture": """
+int mult = 3;
+auto g = [mult](int x) { return x * mult; };
+        """,
+        "lambda_generic_c14": """
+auto f = [](auto x) { return x * 2; };
+        """,
+        "lambda_explicit_return": """
+auto f = [](int x) -> double { return x * 2.5; };
+        """,
+        "lambda_in_function": """
+void func() {
+    auto h = [](int x) { return x; };
+}
+        """,
+        "lambda_nested": """
+auto outer = []() {
+    auto inner = []() { return 42; };
+    return inner;
+};
+        """,
+        "lambda_in_stl": """
+std::sort(v.begin(), v.end(), [](int a, int b) { return a < b; });
+        """,
+        "lambda_in_template": """
+template<typename T>
+void f() {
+    auto l = [](T x) { return x; };
+}
+        """,
+        "template_lambda_interaction": """
+template<typename T>
+class Processor {
+public:
+    void run() {
+        auto l = [](T x) { };
+    }
+};
+        """,
+    }
+
+
 @pytest.fixture
 def python_builder(language_samples: dict[str, dict[str, str]]) -> object:
     """Provide a Python AST builder for testing.

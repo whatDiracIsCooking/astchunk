@@ -651,3 +651,145 @@ class TestCppSpecialCases:
 
         assert len(chunks) >= 1
         assert "struct Point" in chunks[0]["content"]
+
+
+class TestCppTemplateSupport:
+    """Test C++ template declaration support with parametrization.
+
+    Validates that template_declaration nodes are properly recognized as
+    ancestor nodes in chunk context for various C++ template scenarios.
+    """
+
+    @pytest.mark.parametrize(
+        "template_type",
+        [
+            "template_function",
+            "template_class",
+            "template_default_args",
+            "template_non_type_param",
+            "template_template_param",
+            "template_nested_in_class",
+            "template_specialization",
+            "template_variadic",
+            "template_multiple_params",
+        ],
+    )
+    def test_cpp_templates(
+        self, cpp_template_samples: Dict[str, str], template_type: str
+    ) -> None:
+        """Test that template declarations are recognized as ancestor nodes.
+
+        Args:
+            cpp_template_samples: Fixture providing template code samples
+            template_type: The specific template scenario to test
+
+        Validates:
+            - template_declaration node type exists in ancestors
+            - Template scenarios parse without errors
+            - Ancestor context includes template information
+        """
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code: str = cpp_template_samples[template_type]
+        builder: ASTChunkBuilder = ASTChunkBuilder(
+            max_chunk_size=1024, language="cpp", metadata_template="default"
+        )
+        chunks = builder.chunkify(code)
+
+        # Assert template_declaration appears in ancestor context
+        assert any(
+            "template_declaration" in str(chunk.get("ancestors", []))
+            for chunk in chunks
+        ), f"template_declaration node not found in ancestors for scenario: {template_type}"
+
+
+class TestCppLambdaSupport:
+    """Test C++ lambda expression support with parametrization.
+
+    Validates that lambda_expression nodes are properly recognized as
+    function-like ancestor nodes in chunk context for various lambda scenarios.
+    """
+
+    @pytest.mark.parametrize(
+        "lambda_type",
+        [
+            "lambda_basic",
+            "lambda_capture",
+            "lambda_generic_c14",
+            "lambda_explicit_return",
+            "lambda_in_function",
+            "lambda_nested",
+            "lambda_in_stl",
+            "lambda_in_template",
+            "template_lambda_interaction",
+        ],
+    )
+    def test_cpp_lambdas(
+        self, cpp_lambda_samples: Dict[str, str], lambda_type: str
+    ) -> None:
+        """Test that lambda expressions are recognized as function-like nodes.
+
+        Args:
+            cpp_lambda_samples: Fixture providing lambda code samples
+            lambda_type: The specific lambda scenario to test
+
+        Validates:
+            - lambda_expression node type exists in ancestors
+            - Lambda scenarios parse without errors
+            - Ancestor context includes lambda information
+        """
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code: str = cpp_lambda_samples[lambda_type]
+        builder: ASTChunkBuilder = ASTChunkBuilder(
+            max_chunk_size=1024, language="cpp", metadata_template="default"
+        )
+        chunks = builder.chunkify(code)
+
+        # Assert lambda_expression appears in ancestor context
+        assert any(
+            "lambda_expression" in str(chunk.get("ancestors", []))
+            for chunk in chunks
+        ), f"lambda_expression node not found in ancestors for scenario: {lambda_type}"
+
+
+class TestCppRobustness:
+    """Test that AST chunker handles edge cases gracefully.
+
+    Validates that the parser doesn't crash on malformed or incomplete syntax,
+    and handles edge cases robustly.
+    """
+
+    def test_malformed_template_doesnt_crash(self) -> None:
+        """Parser should handle template syntax errors gracefully.
+
+        Tests that incomplete template syntax (missing >) doesn't cause
+        segfault or unhandled exception.
+        """
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = "template<typename T class Container { };"  # Missing >
+        builder = ASTChunkBuilder(
+            max_chunk_size=1024, language="cpp", metadata_template="default"
+        )
+
+        # Should not raise exception, handles gracefully
+        chunks = builder.chunkify(code)
+        assert chunks is not None
+
+    def test_incomplete_lambda_doesnt_crash(self) -> None:
+        """Parser should handle lambda syntax errors gracefully.
+
+        Tests that incomplete lambda syntax (missing closing brace) doesn't
+        cause segfault or unhandled exception.
+        """
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = "auto f = [](int x) {"  # Missing closing brace
+        builder = ASTChunkBuilder(
+            max_chunk_size=1024, language="cpp", metadata_template="default"
+        )
+
+        # Should not raise exception, handles gracefully
+        chunks = builder.chunkify(code)
+        assert chunks is not None

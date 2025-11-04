@@ -1,0 +1,102 @@
+{
+  "timestamp": "2025-11-04T07:14:51.893212+00:00",
+  "parser_version": "tree-sitter-cpp (unknown)",
+  "test_results": [
+    {
+      "name": "template_function",
+      "code": "template<typename T>\nT max(T a, T b) { return (a > b) ? a : b; }",
+      "expected_node": "template_declaration",
+      "found_nodes": [
+        "template_declaration"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "template_class",
+      "code": "template<typename T>\nclass Container { T value; };",
+      "expected_node": "template_declaration",
+      "found_nodes": [
+        "template_declaration"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "template_default_args",
+      "code": "template<typename T = int>\nclass Container { };",
+      "expected_node": "template_declaration",
+      "found_nodes": [
+        "template_declaration"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "template_non_type_param",
+      "code": "template<int N>\nclass Array { };",
+      "expected_node": "template_declaration",
+      "found_nodes": [
+        "template_declaration"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "template_template_param",
+      "code": "template<template<typename> class C>\nclass Wrapper { };",
+      "expected_node": "template_declaration",
+      "found_nodes": [
+        "template_declaration"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "template_nested_in_class",
+      "code": "class Outer {\npublic:\n    template<typename T>\n    class Inner { };\n};",
+      "expected_node": "template_declaration",
+      "found_nodes": [
+        "template_declaration"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "template_specialization",
+      "code": "template<>\nclass Container<int> { int special; };",
+      "expected_node": "template_declaration",
+      "found_nodes": [
+        "template_declaration"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "template_variadic",
+      "code": "template<typename... Args>\nclass Tuple { };",
+      "expected_node": "template_declaration",
+      "found_nodes": [
+        "template_declaration"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "template_multiple_params",
+      "code": "template<typename T, typename U>\nclass Pair { };",
+      "expected_node": "template_declaration",
+      "found_nodes": [
+        "template_declaration"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    }
+  ],
+  "summary": {
+    "total": 9,
+    "passed": 9,
+    "failed": 0,
+    "all_pass": true
+  }
+}

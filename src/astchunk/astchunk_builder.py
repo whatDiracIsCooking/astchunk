@@ -11,6 +11,7 @@ import pyrsistent
 
 from astchunk.astnode import ASTNode
 from astchunk.astchunk import ASTChunk
+from astchunk.language_mappings import get_ancestor_node_types
 from astchunk.preprocessing import ByteRange, preprocess_nws_count, get_nws_count
 
 
@@ -40,6 +41,73 @@ class ASTChunkBuilder:
         else:
             raise ValueError(f"Unsupported Programming Language: {self.language}!")
 
+    def _is_ancestor_type(self, node: ts.Node) -> bool:
+        """Check if a node type is in the ancestor types for the current language.
+
+        Args:
+            node: tree-sitter Node to check
+
+        Returns:
+            True if the node type is a relevant ancestor type for this language
+        """
+        try:
+            ancestor_types = get_ancestor_node_types(self.language)
+            return node.type in ancestor_types
+        except ValueError:
+            # Language not supported, return False
+            return False
+
+    def _has_descendant_ancestor_type(self, node: ts.Node) -> bool:
+        """Check if a node or any of its descendants is an ancestor type.
+
+        This recursive method enables nested ancestor capture. For example,
+        in C++ a template declaration nested inside a class (template_nested_in_class)
+        requires recursive processing to ensure the template appears in the chunk's
+        ancestor context, not just the outer class.
+
+        Without recursion: chunk ancestors = [class]
+        With recursion: chunk ancestors = [class, template_declaration]
+
+        Args:
+            node: tree-sitter Node to check
+
+        Returns:
+            True if node or any descendant is an ancestor type
+        """
+        if self._is_ancestor_type(node):
+            return True
+        for child in node.children:
+            if self._has_descendant_ancestor_type(child):
+                return True
+        return False
+
+    def _process_node_with_descendants(
+        self,
+        node: ts.Node,
+        nws_cumsum: np.ndarray,
+        node_ancestors: pyrsistent.pvector,
+    ) -> Generator[list[ASTNode], None, None]:
+        """Process a node's children recursively to capture nested ancestor context.
+
+        This helper consolidates the duplicate logic for processing nodes that contain
+        nested ancestors (templates, classes, functions, lambdas, etc.).
+
+        Args:
+            node: tree-sitter Node whose children to process
+            nws_cumsum: cumulative sum of non-whitespace characters
+            node_ancestors: ancestors including this node (if it's an ancestor type)
+
+        Yields:
+            Windows of ASTNode from recursive processing
+        """
+        child_windows = list(
+            self.assign_nodes_to_windows(node.children, nws_cumsum, node_ancestors)
+        )
+        # Filter out empty windows before merging
+        child_windows = [w for w in child_windows if w]
+        if child_windows:
+            yield from self.merge_adjacent_windows(child_windows)
+
     # ------------------------------ #
     #            Step #1             #
     # ------------------------------ #
@@ -66,9 +134,29 @@ class ASTChunkBuilder:
         tree_range = ByteRange(root_node.start_byte, root_node.end_byte)
         tree_size = get_nws_count(nws_cumsum, tree_range)
 
-        # If the entire tree can fit in one window, assign tree to window
+        # If the entire tree can fit in one window, check if we should still process children
         if tree_size <= self.max_chunk_size:
-            yield [ASTNode(root_node, tree_size)]
+            # Check if root or any of its descendants contain relevant ancestor types
+            # (templates, classes, functions, lambdas, etc.)
+            #
+            # Rationale for recursive processing even when tree fits in one window:
+            # We need to capture nested ancestors for proper chunk context. For example,
+            # a template nested inside a class requires recursion to extract both the
+            # class and template as ancestors. Without recursion, only the outermost
+            # node (the root) would be captured, losing nested ancestor information.
+            has_ancestor_descendants = any(
+                self._has_descendant_ancestor_type(child) for child in root_node.children
+            )
+            if has_ancestor_descendants:
+                # Recursively process children to capture nested ancestor context
+                # (e.g., template inside class, lambda inside function)
+                ancestors = pyrsistent.v(root_node)
+                yield from self.assign_nodes_to_windows(
+                    root_node.children, nws_cumsum, ancestors
+                )
+            else:
+                # No relevant descendants, just return the root as a single window
+                yield [ASTNode(root_node, tree_size)]
         # Otherwise, recursively assign children to windows
         else:
             ancestors = pyrsistent.v(root_node)
@@ -137,19 +225,50 @@ class ASTChunkBuilder:
                     )
                     if child_windows:
                         # (optional) Greedily merge adjacent windows from the beginning if merged window does not exceed self.max_chunk_size
-                        yield from self.merge_adjacent_windows(child_windows)
+                        # Filter out empty windows first
+                        child_windows = [w for w in child_windows if w]
+                        if child_windows:
+                            yield from self.merge_adjacent_windows(child_windows)
                 else:
                     # Node fits in an empty window
-                    current_window.append(ASTNode(node, node_size, ancestors))
-                    current_window_size += node_size
+                    # Include node itself as ancestor if it's a relevant type
+                    node_ancestors = ancestors.append(node) if self._is_ancestor_type(node) else ancestors
+
+                    # If this node or its descendants contain ancestor types, recurse to capture them
+                    if self._has_descendant_ancestor_type(node):
+                        # Use helper to process children and capture nested ancestor context
+                        yield from self._process_node_with_descendants(
+                            node, nws_cumsum, node_ancestors
+                        )
+                    else:
+                        # No nested ancestors, just add the node to window
+                        current_window.append(ASTNode(node, node_size, node_ancestors))
+                        current_window_size += node_size
 
             # Case 3: node fits in current window
             else:
-                current_window.append(ASTNode(node, node_size, ancestors))
-                current_window_size += node_size
+                # Include node itself as ancestor if it's a relevant type
+                node_ancestors = ancestors.append(node) if self._is_ancestor_type(node) else ancestors
+
+                # If this node or its descendants contain ancestor types, recurse
+                if self._has_descendant_ancestor_type(node):
+                    # Can't fit nested recursion into current window, need to flush and recurse
+                    if current_window:
+                        yield current_window
+                        current_window = []
+                        current_window_size = 0
+
+                    # Use helper to process children and capture nested ancestor context
+                    yield from self._process_node_with_descendants(
+                        node, nws_cumsum, node_ancestors
+                    )
+                else:
+                    # No nested ancestors, just add the node to window
+                    current_window.append(ASTNode(node, node_size, node_ancestors))
+                    current_window_size += node_size
 
         # Add the last window if it's not empty
-        if len(current_window) > 0:
+        if current_window:
             yield current_window
 
     def merge_adjacent_windows(

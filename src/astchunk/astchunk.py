@@ -40,8 +40,10 @@ class ASTChunk:
         self.chunk_text = self.rebuild_code(self.ast_window)
         self.chunk_size = get_nws_count_direct(self.chunk_text)
 
-        # build chunk ancestors using the ancestors of the first ASTNode in the window
-        self.chunk_ancestors = self.build_chunk_ancestors(self.ast_window[0].ancestors)
+        # build chunk ancestors using the ancestors of the node with deepest ancestry (most ancestors)
+        # This ensures we capture nested ancestors like templates inside classes
+        deepest_node = max(self.ast_window, key=lambda n: len(n.ancestors))
+        self.chunk_ancestors = self.build_chunk_ancestors(deepest_node.ancestors)
 
     @property
     def strcode(self):
@@ -117,8 +119,8 @@ class ASTChunk:
 
     def build_chunk_ancestors(self, node_ancestors: List[ts.Node]) -> List[str]:
         """
-        Build the class/function path to the chunk. The path is built from the ancestors of the first
-        ASTNode in the window. We only keep the ancestors that are class or function definitions.
+        Build the class/function path to the chunk. The path is built from the ancestors of the node
+        with the deepest ancestry in the window. We only keep the ancestors that are class or function definitions.
 
         The intuition is that we want to record where the chunk is located in the AST. This can be useful
         for downstream tasks such as code retrieval (e.g., disambiguating between different functions with the same name).
@@ -148,7 +150,12 @@ class ASTChunk:
                 node_text = node.text
                 if node_text is not None:
                     first_line = node_text.decode("utf8").split("\n")[0]
-                    chunk_ancestors.append(first_line)
+                    # Include node type prefix to distinguish similar-looking ancestors
+                    # (e.g., "template_declaration: template<typename T>" vs
+                    # "class_specifier: class Foo"). This enables downstream consumers
+                    # to filter or categorize ancestors by type without parsing syntax.
+                    ancestor_repr = f"{node.type}: {first_line}"
+                    chunk_ancestors.append(ancestor_repr)
 
         return chunk_ancestors
 
@@ -241,6 +248,6 @@ class ASTChunk:
                 "text": self.chunk_text,
             }
         else:
-            code_window = {"content": self.chunk_text, "metadata": self.metadata}
+            code_window = {"content": self.chunk_text, "metadata": self.metadata, "ancestors": self.chunk_ancestors}
 
         return code_window

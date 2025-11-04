@@ -25,8 +25,10 @@ Type Definitions:
     LanguageMappings: Dict mapping language name to LanguageMapping
 
 Categories:
-    - "class": Class-like constructs (classes, interfaces, structs, enums)
-    - "function": Function-like constructs (functions, methods, constructors)
+    - "class": Class-like constructs (classes, interfaces, structs, enums, templates)
+        * C++ includes template_declaration as class-like (templates define reusable type patterns)
+    - "function": Function-like constructs (functions, methods, constructors, lambdas)
+        * C++ includes lambda_expression as function-like (lambdas are callable anonymous functions)
     - "namespace": Namespace-like constructs (namespaces, modules) - optional, not all languages
 """
 
@@ -57,8 +59,10 @@ LANGUAGE_NODE_TYPES: LanguageMappings = {
         "namespace": {"internal_module"},
     },
     "cpp": {
-        "class": {"class_specifier", "struct_specifier"},
-        "function": {"function_definition"},
+        # Templates included in "class" as they typically declare class/function templates
+        "class": {"class_specifier", "struct_specifier", "template_declaration"},
+        # Lambdas included in "function" as they are function objects
+        "function": {"function_definition", "lambda_expression"},
         "namespace": {"namespace_definition"},
     },
 }
@@ -94,8 +98,8 @@ def get_ancestor_node_types(language: str) -> Set[str]:
          'method_declaration', 'constructor_declaration'}
 
         >>> get_ancestor_node_types("cpp")
-        {'class_specifier', 'struct_specifier', 'function_definition',
-         'namespace_definition'}
+        {'class_specifier', 'struct_specifier', 'template_declaration',
+         'function_definition', 'lambda_expression', 'namespace_definition'}
 
         >>> get_ancestor_node_types("ruby")  # Unsupported
         Traceback (most recent call last):
@@ -113,7 +117,8 @@ def get_ancestor_node_types(language: str) -> Set[str]:
         )
 
     mapping = LANGUAGE_NODE_TYPES[language]
-    # Union of class, function, and namespace node types (all are Sets for O(1) membership)
+    # Union of "class" (classes/structs/templates), "function" (functions/lambdas),
+    # and "namespace" categories (all are Sets for O(1) membership)
     return (
         mapping.get("class", set())
         | mapping.get("function", set())

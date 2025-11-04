@@ -1,0 +1,103 @@
+{
+  "timestamp": "2025-11-04T07:14:46.741524+00:00",
+  "parser_version": "tree-sitter-cpp (unknown)",
+  "test_results": [
+    {
+      "name": "lambda_basic",
+      "code": "auto f = [](int x) { return x * 2; };",
+      "expected_node": "lambda_expression",
+      "found_nodes": [
+        "lambda_expression"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "lambda_capture",
+      "code": "int mult = 3;\nauto g = [mult](int x) { return x * mult; };",
+      "expected_node": "lambda_expression",
+      "found_nodes": [
+        "lambda_expression"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "lambda_generic_c14",
+      "code": "auto f = [](auto x) { return x * 2; };",
+      "expected_node": "lambda_expression",
+      "found_nodes": [
+        "lambda_expression"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "lambda_explicit_return",
+      "code": "auto f = [](int x) -> double { return x * 2.5; };",
+      "expected_node": "lambda_expression",
+      "found_nodes": [
+        "lambda_expression"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "lambda_in_function",
+      "code": "void func() {\n    auto h = [](int x) { return x; };\n}",
+      "expected_node": "lambda_expression",
+      "found_nodes": [
+        "lambda_expression"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "lambda_nested",
+      "code": "auto outer = []() {\n    auto inner = []() { return 42; };\n    return inner;\n};",
+      "expected_node": "lambda_expression",
+      "found_nodes": [
+        "lambda_expression",
+        "lambda_expression"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "lambda_in_stl",
+      "code": "std::sort(v.begin(), v.end(), [](int a, int b) { return a < b; });",
+      "expected_node": "lambda_expression",
+      "found_nodes": [
+        "lambda_expression"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "lambda_in_template",
+      "code": "template<typename T>\nvoid f() {\n    auto l = [](T x) { return x; };\n}",
+      "expected_node": "lambda_expression",
+      "found_nodes": [
+        "lambda_expression"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    },
+    {
+      "name": "template_lambda_interaction",
+      "code": "template<typename T>\nclass Processor {\npublic:\n    void run() {\n        auto l = [](T x) { };\n    }\n};",
+      "expected_node": "lambda_expression",
+      "found_nodes": [
+        "lambda_expression"
+      ],
+      "status": "PASS",
+      "parse_error": false
+    }
+  ],
+  "summary": {
+    "total": 9,
+    "passed": 9,
+    "failed": 0,
+    "all_pass": true
+  }
+}
