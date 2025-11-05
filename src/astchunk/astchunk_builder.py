@@ -23,6 +23,16 @@ class ASTChunkBuilder:
         - metadata_template: Type of metadata to store (e.g., start/end line number, path to file, etc).
     """
 
+    # Unsupported C++20 module syntax patterns
+    # These patterns trigger detection to prevent silent parsing failures
+    _UNSUPPORTED_CPP_MODULE_PATTERNS = (
+        "export module",  # Module export declaration
+        "import std",      # Standard library imports
+        "import <",        # Header unit imports
+        "module;",         # Module declaration
+        "module:",         # Module partition
+    )
+
     def __init__(self, **configs):
         self.max_chunk_size: int = configs["max_chunk_size"]
         self.language: str = configs["language"]
@@ -437,6 +447,42 @@ class ASTChunkBuilder:
 
         return code_windows
 
+    def _detect_cpp_modules(self, code: str) -> None:
+        """Detect unsupported C++20 module syntax and raise ValueError.
+
+        C++20 modules (export module, import, etc.) are not supported by
+        tree-sitter-cpp. This performs pre-parsing detection to provide clear
+        error messages instead of silent failures.
+
+        Args:
+            code: Source code string to check
+
+        Raises:
+            ValueError: If C++20 module syntax is detected
+
+        Note:
+            False positives may occur when module keywords appear in comments
+            or string literals. This is an acceptable tradeoff - better to
+            over-detect than miss real module usage.
+        """
+        # Only check for C++ code
+        if self.language != "cpp":
+            return
+
+        # Check each pattern
+        for pattern in self._UNSUPPORTED_CPP_MODULE_PATTERNS:
+            if pattern in code:
+                raise ValueError(
+                    f"""\
+C++20 modules are not supported. Detected '{pattern}' in code.
+
+tree-sitter-cpp does not currently parse module syntax. Consider using
+traditional #include directives instead, or wait for tree-sitter-cpp to
+add module support.
+
+See: https://github.com/tree-sitter/tree-sitter-cpp/issues"""
+                )
+
     # ------------------------------ #
     #       AST Chunking Logic       #
     # ------------------------------ #
@@ -447,7 +493,13 @@ class ASTChunkBuilder:
         Args:
             code: code to be chunked
             **configs: additional arguments for building chunks and/or chunk metadata
+
+        Raises:
+            ValueError: If unsupported syntax is detected (e.g., C++20 modules)
         """
+        # Detect unsupported syntax before parsing
+        self._detect_cpp_modules(code)
+
         # step 1: greedily assign AST tree / AST nodes to windows
         #         see self.assign_tree_to_windows() and self.assign_nodes_to_windows() for details
         ast = self.parser.parse(bytes(code, "utf8"))
