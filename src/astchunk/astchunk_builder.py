@@ -54,6 +54,8 @@ class ASTChunkBuilder:
     def _is_ancestor_type(self, node: ts.Node) -> bool:
         """Check if a node type is in the ancestor types for the current language.
 
+        For C++, this also includes pure virtual methods.
+
         Args:
             node: tree-sitter Node to check
 
@@ -62,7 +64,12 @@ class ASTChunkBuilder:
         """
         try:
             ancestor_types = get_ancestor_node_types(self.language)
-            return node.type in ancestor_types
+            is_standard_ancestor = node.type in ancestor_types
+
+            # Special case for C++ pure virtual methods
+            is_pure_virtual = self._is_pure_virtual_method(node)
+
+            return is_standard_ancestor or is_pure_virtual
         except ValueError:
             # Language not supported, return False
             return False
@@ -90,6 +97,51 @@ class ASTChunkBuilder:
             if self._has_descendant_ancestor_type(child):
                 return True
         return False
+
+    def _is_pure_virtual_method(self, node: ts.Node) -> bool:
+        """Check if a field_declaration node is actually a pure virtual method.
+
+        Pure virtual methods in C++ (e.g., virtual void method() = 0;) are
+        represented as field_declaration nodes by tree-sitter-cpp, not
+        function_definition nodes. This method detects them by checking for:
+        1. Node type is field_declaration
+        2. Node text contains 'virtual' keyword
+        3. Node text contains '= 0' pure specifier pattern
+
+        Args:
+            node: tree-sitter Node to check
+
+        Returns:
+            True if node is a pure virtual method declaration
+
+        Examples:
+            >>> # These are pure virtual methods (detected):
+            >>> # virtual void method() = 0;
+            >>> # virtual int compute(int x) = 0;
+            >>> # virtual void readonly() const = 0;
+
+            >>> # These are NOT pure virtual (ignored):
+            >>> # int x;                           // regular field
+            >>> # char* ptr;                       // regular field
+            >>> # virtual void regular() { }       // regular virtual with body
+        """
+        # Only check field_declaration nodes in C++ (tree-sitter quirk)
+        # Tree-sitter-cpp represents pure virtual methods as field_declaration
+        # nodes instead of function_definition nodes, likely because the '= 0'
+        # syntax resembles field initialization syntactically
+        if self.language != "cpp" or node.type != "field_declaration":
+            return False
+
+        # Get node text (tree-sitter Node.text returns bytes)
+        node_text = node.text.decode("utf8") if node.text else ""
+
+        # Check for pure virtual pattern: must have 'virtual' and '= 0'
+        # Strip to handle whitespace/newlines in multi-line declarations
+        node_text_stripped = node_text.strip()
+        has_virtual = "virtual" in node_text_stripped
+        has_pure_specifier = "= 0" in node_text_stripped
+
+        return has_virtual and has_pure_specifier
 
     def _process_node_with_descendants(
         self,
