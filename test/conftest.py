@@ -371,6 +371,27 @@ def language_samples() -> dict[str, dict[str, str]]:
                 "    int function() { return 0; }\n"
                 "}\n"
             ),
+            # C++20 modules (unsupported - should trigger detection)
+            "cpp_module_export": "export module mylib;\n",
+            "cpp_module_import_std": "import std;\n",
+            "cpp_module_import_header": "import <iostream>;\n",
+            "cpp_module_with_other_code": (
+                "#include <vector>\n"
+                "export module mylib;\n"
+                "int main() { return 0; }\n"
+            ),
+            "cpp_module_partition": (
+                "export module mylib:core;\n"
+                "void fn() { }\n"
+            ),
+            "cpp_multiple_imports": (
+                "import std;\n"
+                "import <iostream>;\n"
+                "int main() { return 0; }\n"
+            ),
+            # False positive scenarios (should also trigger detection)
+            "cpp_module_in_comment": "// TODO: Convert to export module when supported\nint main() { return 0; }\n",
+            "cpp_module_in_string": 'const char* msg = "export module test";\nint main() { return 0; }\n',
         },
     }
 

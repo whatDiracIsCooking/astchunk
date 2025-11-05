@@ -793,3 +793,278 @@ class TestCppRobustness:
         # Should not raise exception, handles gracefully
         chunks = builder.chunkify(code)
         assert chunks is not None
+
+class TestCppModuleDetection:
+    """Test detection of unsupported C++20 module syntax.
+
+    IMPORTANT: This test class prevents SILENT FAILURES.
+    When C++20 module syntax is encountered, we raise a helpful ValueError
+    instead of letting it parse silently and confuse users.
+
+    FALSE POSITIVE TRADEOFF:
+    - Comments/strings with module keywords will trigger detection
+    - This is ACCEPTABLE: Better to over-detect than miss real modules
+    - Documented in test_module_keyword_in_comment_raises_false_positive()
+
+    Regression Metric:
+    - If these tests fail, module detection is broken
+    - Users would see silent parsing failures (BAD)
+    - Restore detection immediately
+    """
+
+    def test_export_module_raises_error(
+        self, language_samples: Dict[str, Dict[str, str]]
+    ) -> None:
+        """Test that 'export module' syntax raises ValueError.
+
+        Regression Prevention: Ensures users get helpful error for module syntax.
+        """
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = language_samples["cpp"]["cpp_module_export"]
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        with pytest.raises(ValueError) as exc_info:
+            builder.chunkify(code)
+
+        # Verify error message quality (not just keywords)
+        error_msg = str(exc_info.value)
+        assert "C++20 modules" in error_msg or "C++ modules" in error_msg
+        assert "not supported" in error_msg.lower()
+        assert "export module" in error_msg
+        assert "tree-sitter" in error_msg.lower()
+        assert "#include" in error_msg or "traditional" in error_msg
+        assert "github.com" in error_msg
+
+    def test_import_std_raises_error(
+        self, language_samples: Dict[str, Dict[str, str]]
+    ) -> None:
+        """Test that 'import std' syntax raises ValueError.
+
+        Regression Prevention: Ensures users get helpful error for module imports.
+        """
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = language_samples["cpp"]["cpp_module_import_std"]
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        with pytest.raises(ValueError) as exc_info:
+            builder.chunkify(code)
+
+        error_msg = str(exc_info.value)
+        assert "module" in error_msg.lower() or "import" in error_msg.lower()
+
+    def test_import_header_unit_raises_error(
+        self, language_samples: Dict[str, Dict[str, str]]
+    ) -> None:
+        """Test that 'import <header>' syntax raises ValueError.
+
+        Regression Prevention: Ensures header unit imports are detected.
+        """
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = language_samples["cpp"]["cpp_module_import_header"]
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        with pytest.raises(ValueError) as exc_info:
+            builder.chunkify(code)
+
+        error_msg = str(exc_info.value)
+        assert "module" in error_msg.lower() or "import" in error_msg.lower()
+
+    def test_module_with_other_code_raises_error(
+        self, language_samples: Dict[str, Dict[str, str]]
+    ) -> None:
+        """Test that module syntax in mixed code still triggers detection."""
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = language_samples["cpp"]["cpp_module_with_other_code"]
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        with pytest.raises(ValueError):
+            builder.chunkify(code)
+
+    def test_module_partition_raises_error(
+        self, language_samples: Dict[str, Dict[str, str]]
+    ) -> None:
+        """Test that module partition syntax raises ValueError."""
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = language_samples["cpp"]["cpp_module_partition"]
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        with pytest.raises(ValueError):
+            builder.chunkify(code)
+
+    def test_multiple_imports_raises_error(
+        self, language_samples: Dict[str, Dict[str, str]]
+    ) -> None:
+        """Test that multiple import statements trigger detection."""
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = language_samples["cpp"]["cpp_multiple_imports"]
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        with pytest.raises(ValueError):
+            builder.chunkify(code)
+
+    def test_regular_includes_not_flagged(self) -> None:
+        """Test that regular #include directives don't trigger module detection.
+
+        Regression Prevention: Ensures false positives are avoided for normal C++.
+        """
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = "#include <iostream>\n#include <vector>\nint main() { return 0; }\n"
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        # Should not raise exception
+        chunks = builder.chunkify(code)
+        assert isinstance(chunks, list)
+
+    def test_module_keyword_in_comment_raises_false_positive(
+        self, language_samples: Dict[str, Dict[str, str]]
+    ) -> None:
+        """Comments with module keywords trigger false positive.
+
+        ACCEPTABLE TRADEOFF: Better to over-detect than miss real modules.
+        This is documented behavior, not a bug.
+        Users should temporarily remove/rephrase comments if they hit this.
+        """
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = language_samples["cpp"]["cpp_module_in_comment"]
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        with pytest.raises(ValueError) as exc_info:
+            builder.chunkify(code)
+
+        assert "module" in str(exc_info.value).lower()
+
+    def test_module_keyword_in_string_raises_false_positive(
+        self, language_samples: Dict[str, Dict[str, str]]
+    ) -> None:
+        """String literals with module keywords trigger false positive.
+
+        ACCEPTABLE TRADEOFF: Better to over-detect than miss real modules.
+        This is rare in practice.
+        """
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = language_samples["cpp"]["cpp_module_in_string"]
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        with pytest.raises(ValueError) as exc_info:
+            builder.chunkify(code)
+
+        assert "module" in str(exc_info.value).lower()
+
+    def test_detect_cpp_modules_isolation(self) -> None:
+        """Test _detect_cpp_modules() method in isolation.
+
+        Validates detection logic separately from chunkify() integration.
+        """
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        # Should raise for module code
+        with pytest.raises(ValueError):
+            builder._detect_cpp_modules("export module mylib;")
+
+        # Should NOT raise for normal code
+        builder._detect_cpp_modules("#include <iostream>\nint main() {}")
+        # (no assertion needed - if it raises, test fails)
+
+    def test_detection_only_runs_for_cpp(self) -> None:
+        """Module detection should only run for C++, not other languages."""
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        python_code = "import module  # Python import\nprint('hello')\n"
+
+        for language in ["python", "java", "csharp", "typescript"]:
+            builder = ASTChunkBuilder(
+                max_chunk_size=512, language=language, metadata_template="default"
+            )
+            # Should NOT raise error for non-C++ languages
+            chunks = builder.chunkify(python_code)
+            assert isinstance(chunks, list)
+
+    @pytest.mark.parametrize(
+        "module_syntax",
+        [
+            "export module mylib;",
+            "import std;",
+            "import <iostream>;",
+        ],
+    )
+    def test_module_patterns_detected(
+        self, module_syntax: str
+    ) -> None:
+        """Test that common module patterns are detected.
+
+        Note: Simple string matching means extra whitespace variations
+        (e.g., 'export  module') are NOT detected. This is an acceptable
+        limitation since the standard formatting is rarely used with extra spaces.
+        """
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        with pytest.raises(ValueError):
+            builder.chunkify(module_syntax)
+
+    def test_templates_dont_trigger_detection(self) -> None:
+        """Test that C++ templates don't trigger false positive.
+
+        Regression Prevention: Ensures templates parse normally.
+        """
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = "template<typename T>\nclass Container { };\n"
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        # Should NOT raise
+        chunks = builder.chunkify(code)
+        assert isinstance(chunks, list)
+
+    def test_namespace_named_module_doesnt_trigger(self) -> None:
+        """Namespace with 'module' as identifier should not trigger.
+
+        This distinguishes module keyword from module identifier.
+        Note: May still trigger if patterns like 'module;' or 'module:' appear.
+        """
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = "namespace module { void fn() { } }\n"
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        # Should NOT raise (namespace module is not module declaration)
+        chunks = builder.chunkify(code)
+        assert isinstance(chunks, list)
