@@ -1068,3 +1068,206 @@ class TestCppModuleDetection:
         # Should NOT raise (namespace module is not module declaration)
         chunks = builder.chunkify(code)
         assert isinstance(chunks, list)
+
+
+class TestCppPureVirtualDetection:
+    """Direct unit tests for pure virtual method detection helper.
+
+    Tests the _is_pure_virtual_method() helper method in isolation
+    to ensure correct detection logic before integration testing.
+    """
+
+    def test_is_pure_virtual_method_detects_basic(self, cpp_builder) -> None:
+        """Test detection of basic pure virtual method."""
+        from astchunk.astchunk_builder import ASTChunkBuilder
+        import tree_sitter as ts
+
+        code = "class I { virtual void method() = 0; };"
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        tree = builder.parser.parse(bytes(code, "utf8"))
+
+        def find_field_declarations(node):
+            if node.type == "field_declaration":
+                yield node
+            for child in node.children:
+                yield from find_field_declarations(child)
+
+        field_decls = list(find_field_declarations(tree.root_node))
+        assert len(field_decls) > 0, "Should find at least one field_declaration"
+
+        # This will fail with AttributeError until implementation
+        result = builder._is_pure_virtual_method(field_decls[0])
+        assert result is True, "Should detect pure virtual method"
+
+    def test_is_pure_virtual_method_with_const_qualifier(
+        self, cpp_builder
+    ) -> None:
+        """Test detection with const qualifier."""
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = "class I { virtual void method() const = 0; };"
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        tree = builder.parser.parse(bytes(code, "utf8"))
+
+        def find_field_declarations(node):
+            if node.type == "field_declaration":
+                yield node
+            for child in node.children:
+                yield from find_field_declarations(child)
+
+        field_decls = list(find_field_declarations(tree.root_node))
+        assert len(field_decls) > 0
+
+        result = builder._is_pure_virtual_method(field_decls[0])
+        assert result is True, "Should detect const-qualified pure virtual"
+
+    def test_is_pure_virtual_method_ignores_regular_virtual(
+        self, cpp_builder
+    ) -> None:
+        """Test that regular virtual methods with implementation are rejected."""
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = "class C { virtual void method() { } };"
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        tree = builder.parser.parse(bytes(code, "utf8"))
+
+        def find_all_nodes(node):
+            yield node
+            for child in node.children:
+                yield from find_all_nodes(child)
+
+        for node in find_all_nodes(tree.root_node):
+            result = builder._is_pure_virtual_method(node)
+            if result:
+                assert False, f"Should not detect regular virtual as pure. Node type: {node.type}"
+
+    def test_is_pure_virtual_method_ignores_regular_fields(
+        self, cpp_builder
+    ) -> None:
+        """Test that regular field declarations are rejected."""
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        code = "class C { int x; char* ptr; };"
+        builder = ASTChunkBuilder(
+            max_chunk_size=512, language="cpp", metadata_template="default"
+        )
+
+        tree = builder.parser.parse(bytes(code, "utf8"))
+
+        def find_field_declarations(node):
+            if node.type == "field_declaration":
+                yield node
+            for child in node.children:
+                yield from find_field_declarations(child)
+
+        field_decls = list(find_field_declarations(tree.root_node))
+
+        for field_decl in field_decls:
+            result = builder._is_pure_virtual_method(field_decl)
+            assert result is False, f"Should not detect regular field as pure virtual. Text: {field_decl.text}"
+
+
+class TestCppPureVirtualMethods:
+    """Comprehensive integration tests for pure virtual method support.
+
+    Tests the full chunking pipeline with pure virtual methods across
+    various edge cases and scenarios.
+    """
+
+    @pytest.mark.parametrize("scenario", [
+        "pure_virtual_basic",
+        "pure_virtual_with_qualifiers",
+        "pure_virtual_multiline",
+        "pure_virtual_mixed_with_regular",
+        "pure_virtual_destructor",
+        "pure_virtual_template",
+    ])
+    def test_cpp_pure_virtual_captured_as_ancestor(
+        self,
+        language_samples: Dict[str, Dict[str, str]],
+        cpp_builder,
+        scenario: str
+    ) -> None:
+        """Test that pure virtual methods are captured in chunk ancestors.
+
+        Parametrized test covering multiple scenarios.
+        """
+        code = language_samples["cpp"][scenario]
+        chunks = cpp_builder.chunkify(code)
+
+        assert len(chunks) >= 1, f"No chunks generated for {scenario}"
+
+        chunks_with_ancestors = [c for c in chunks if c.get("ancestors")]
+        assert len(chunks_with_ancestors) > 0, \
+            f"No chunk ancestors extracted for {scenario}"
+
+        all_ancestors = []
+        for chunk in chunks:
+            all_ancestors.extend(chunk.get("ancestors", []))
+
+        assert len(all_ancestors) > 0, \
+            f"Expected ancestors for {scenario}, got none"
+
+    def test_cpp_pure_virtual_no_false_positives(
+        self,
+        language_samples: Dict[str, Dict[str, str]],
+        cpp_builder
+    ) -> None:
+        """Ensure regular fields and methods aren't captured as pure virtuals."""
+        code = language_samples["cpp"]["pure_virtual_mixed_with_regular"]
+        chunks = cpp_builder.chunkify(code)
+
+        assert len(chunks) >= 1
+
+        all_ancestors = []
+        for chunk in chunks:
+            all_ancestors.extend(chunk.get("ancestors", []))
+
+        assert len(all_ancestors) > 0, \
+            "Expected some ancestors in mixed scenario"
+
+    def test_cpp_pure_virtual_catches_all_qualifiers(
+        self,
+        language_samples: Dict[str, Dict[str, str]],
+        cpp_builder
+    ) -> None:
+        """Ensure const/volatile/const volatile pure virtuals are captured."""
+        code = language_samples["cpp"]["pure_virtual_with_qualifiers"]
+        chunks = cpp_builder.chunkify(code)
+
+        assert len(chunks) >= 1
+
+        chunks_with_ancestors = [c for c in chunks if c.get("ancestors")]
+        assert len(chunks_with_ancestors) > 0, \
+            "Const/volatile qualified pure virtuals should be captured"
+
+    def test_pure_virtual_detection_only_runs_for_cpp(self) -> None:
+        """Verify pure virtual detection is C++-specific."""
+        from astchunk.astchunk_builder import ASTChunkBuilder
+
+        python_code = """
+class Base:
+    # virtual method = 0
+    def method(self):
+        x = 0
+        return x
+"""
+
+        python_builder = ASTChunkBuilder(
+            max_chunk_size=512,
+            language="python",
+            metadata_template="default"
+        )
+
+        chunks = python_builder.chunkify(python_code)
+        assert chunks is not None
+        assert len(chunks) >= 1

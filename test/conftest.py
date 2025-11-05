@@ -371,6 +371,61 @@ def language_samples() -> dict[str, dict[str, str]]:
                 "    int function() { return 0; }\n"
                 "}\n"
             ),
+            # Pure virtual methods - Basic scenario
+            "pure_virtual_basic": (
+                "class Interface {\n"
+                "public:\n"
+                "    virtual void method() = 0;\n"
+                "    virtual int compute(int x) = 0;\n"
+                "};\n"
+            ),
+            # Pure virtual methods - With const/volatile qualifiers
+            "pure_virtual_with_qualifiers": (
+                "class Base {\n"
+                "public:\n"
+                "    virtual void readonly() const = 0;\n"
+                "    virtual void restricted() volatile = 0;\n"
+                "    virtual void both() const volatile = 0;\n"
+                "};\n"
+            ),
+            # Pure virtual methods - Multi-line declarations
+            "pure_virtual_multiline": (
+                "class Complex {\n"
+                "public:\n"
+                "    virtual void complexMethod(\n"
+                "        int arg1,\n"
+                "        double arg2\n"
+                "    ) = 0;\n"
+                "};\n"
+            ),
+            # Pure virtual methods - Mixed with regular methods and fields
+            "pure_virtual_mixed_with_regular": (
+                "class Mixed {\n"
+                "public:\n"
+                "    virtual void pureMethod() = 0;       // Should capture\n"
+                "    virtual void regularVirtual() { }    // Should NOT capture\n"
+                "    void normalMethod() { }              // Should NOT capture\n"
+                "    int field;                           // Should NOT capture\n"
+                "    virtual ~Mixed() = default;          // Should NOT capture\n"
+                "};\n"
+            ),
+            # Pure virtual destructor (rare but valid C++)
+            "pure_virtual_destructor": (
+                "class Base {\n"
+                "public:\n"
+                "    virtual ~Base() = 0;                 // Pure virtual destructor\n"
+                "    virtual void method() = 0;\n"
+                "};\n"
+            ),
+            # Template class with pure virtual methods
+            "pure_virtual_template": (
+                "template<typename T>\n"
+                "class GenericInterface {\n"
+                "public:\n"
+                "    virtual T process(T input) = 0;\n"
+                "    virtual void reset() = 0;\n"
+                "};\n"
+            ),
             # C++20 modules (unsupported - should trigger detection)
             "cpp_module_export": "export module mylib;\n",
             "cpp_module_import_std": "import std;\n",
